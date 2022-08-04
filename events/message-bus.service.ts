@@ -17,12 +17,13 @@
  */
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { XoJson } from '@zeta/api';
 
 import { FullQualifiedName, RuntimeContext } from '@zeta/api/xo/xo-describer';
 import { AuthService } from '@zeta/auth';
 import { randomUUID } from '@zeta/base';
 
-import { Observable, of, Subject } from 'rxjs/';
+import { Observable, of, Subject } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { XoDeploymentItemChange } from './xo/deployment-item-change.model';
@@ -174,7 +175,7 @@ export class MessageBusService {
 
         return this.http.get(url).pipe(
             catchError(error => of(null))
-        ).subscribe(responseJSON => {
+        ).subscribe((responseJSON: XoJson) => {
             // continue with multi user requests (in error case, defer next request)
             if (this.running) {
                 const delay = responseJSON ? 0 : 10 * 1000;
