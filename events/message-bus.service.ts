@@ -17,13 +17,12 @@
  */
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { XoJson } from '@zeta/api';
 
 import { FullQualifiedName, RuntimeContext } from '@zeta/api/xo/xo-describer';
 import { AuthService } from '@zeta/auth';
 import { randomUUID } from '@zeta/base';
 
-import { Observable, of, Subject } from 'rxjs';
+import { Observable, of, Subject } from 'rxjs/';
 import { catchError } from 'rxjs/operators';
 
 import { XoDeploymentItemChange } from './xo/deployment-item-change.model';
@@ -33,7 +32,9 @@ import { XoDocumentRelationsChange } from './xo/document-relations-change.model'
 import { XoDocumentUnlock } from './xo/document-unlock.model';
 import { XoEvent } from './xo/event.model';
 import { XoGetEventsResponse } from './xo/get-events-response.model';
+import { XoMessage } from './xo/message.model';
 import { XoOISChange } from './xo/ois-change.model';
+import { XoProjectEvent } from './xo/project-event.model';
 import { XoRemoteDestinationsChange } from './xo/remote-destinations-change.model';
 import { XoStructureChange } from './xo/structure-change.model';
 import { XoSubtypesChange } from './xo/subtypes-change.model';
@@ -42,6 +43,9 @@ import { XoXMOMCreateRTC } from './xo/xmom-create-rtc.model';
 import { XoXMOMDeleteRTC } from './xo/xmom-delete-rtc.model';
 import { XoXMOMDelete } from './xo/xmom-delete.model';
 import { XoXMOMSave } from './xo/xmom-save.model';
+
+
+export enum EventEndpoint { events = 'events', projectEvents = 'projectEvents' }
 
 
 /**
@@ -101,8 +105,18 @@ export class XMOMChangeBundle {
 @Injectable()
 export class MessageBusService {
 
-    private running = false;
+    readonly RUNTIME_CONTEXT = 'runtimeContext';
+    readonly EVENTS_REQUEST = 'events';
+    readonly PROJECT_EVENTS_REQUEST = 'projectEvents';
+    readonly PROJECT_EVENTS_SUBSCRIBE = 'subscribeProjectEvents';
+    readonly PROJECT_EVENTS_UNSUBSCRIBE = 'unsubscribeProjectEvents';
+    readonly STATUS_REFRESH_DELAY = 10 * 1000;
+
+    private internalRequestsRunning = false;
     private readonly id: string = randomUUID();
+
+    private pendingCustomRequest = false;
+    private readonly projectSubscriptionCorrIds = new Set<string>();
 
     private readonly remoteDestinationsChangeSubject = new Subject<XoRemoteDestinationsChange>();
     get remoteDestinationsChange(): Observable<XoRemoteDestinationsChange> { return this.remoteDestinationsChangeSubject.asObservable(); }
@@ -150,37 +164,56 @@ export class MessageBusService {
     private readonly xmomChangeSubject = new Subject<XMOMChangeBundle>();
     get xmomChange(): Observable<XMOMChangeBundle> { return this.xmomChangeSubject.asObservable(); }
 
+    // custom messages
+    private readonly customMessageReceivedSubject = new Subject<XoProjectEvent>();
+    get customMessageReceived(): Observable<XoProjectEvent> { return this.customMessageReceivedSubject.asObservable(); }
 
     constructor(private readonly http: HttpClient, private readonly auth: AuthService) {
     }
 
 
+    // Starts request loop for Xyna-internal events. Loop for custom events is started automatically after adding subscription via addCustomMessageSubscription().
     startUpdates() {
-        if (!this.running) {
-            this.running = true;
-            this.requestEvents();
+        if (!this.internalRequestsRunning) {
+            this.internalRequestsRunning = true;
+            this.requestEvents(EventEndpoint.events);
         } else {
             console.warn('Multiuser requests are already running.');
         }
     }
 
 
+    // Stops request loop for Xyna-internal events.
     stopUpdates() {
-        this.running = false;
+        this.internalRequestsRunning = false;
     }
 
 
-    protected requestEvents() {
-        const url = 'runtimeContext/' + RuntimeContext.guiHttpApplication.uniqueKey + '/events/' + this.id;
+    protected requestEvents(endpoint: EventEndpoint) {
+        const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + endpoint + '/' + this.id;
+
+        if (endpoint === EventEndpoint.projectEvents) {
+            this.pendingCustomRequest = true;
+        }
 
         return this.http.get(url).pipe(
-            catchError(error => of(null))
-        ).subscribe((responseJSON: XoJson) => {
+            catchError(() => {
+                if (endpoint === EventEndpoint.projectEvents) {
+                    this.pendingCustomRequest = false;
+                }
+
+                return of(null);
+            })
+        ).subscribe(responseJSON => {
+            if (endpoint === EventEndpoint.projectEvents) {
+                this.pendingCustomRequest = false;
+            }
+
             // continue with multi user requests (in error case, defer next request)
-            if (this.running) {
-                const delay = responseJSON ? 0 : 10 * 1000;
+            if (this.continueRequests(endpoint)) {
+                const delay = responseJSON ? 0 : this.STATUS_REFRESH_DELAY;
                 setTimeout(() => {
-                    this.requestEvents();
+                    this.requestEvents(endpoint);
                 }, delay);
             }
 
@@ -189,6 +222,15 @@ export class MessageBusService {
                 this.handleEvents(response.updates.data.filter(e => !e.ignoreSelfInvoked || e.creator !== this.auth.username));
             }
         });
+    }
+
+
+    protected continueRequests(endpoint: EventEndpoint): boolean {
+        if (endpoint === EventEndpoint.events) {
+            return this.internalRequestsRunning;
+        }
+
+        return this.projectSubscriptionCorrIds.size > 0;
     }
 
 
@@ -225,10 +267,61 @@ export class MessageBusService {
                 this.xmomDeleteRTCSubject.next(e);
             } else if (e instanceof XoXMOMChangedRTCDependencies) {
                 this.xmomChangedRTCDependenciesSubject.next(e);
+            } else if (e instanceof XoProjectEvent) {
+                this.customMessageReceivedSubject.next(e);
             }
         });
         if (xmomChangeBundle.hasData()) {
             this.xmomChangeSubject.next(xmomChangeBundle);
         }
     }
+
+    // --- custom messages ---
+
+    addCustomMessageSubscription(subscription: XoMessage) {
+        if (this.projectSubscriptionCorrIds.has(subscription.correlation)) {
+            // a subscription for this correlation id already exists
+            return;
+        }
+
+        this.projectSubscriptionCorrIds.add(subscription.correlation);
+
+        const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_SUBSCRIBE + '/' + this.id;
+        this.http.post(url, subscription.encode()).pipe(
+            catchError(() => {
+                this.projectSubscriptionCorrIds.delete(subscription.correlation);
+                return of(null);
+            })
+        ).subscribe(result => {
+            if (!result.error) {
+                if (this.projectSubscriptionCorrIds.size > 0 && !this.pendingCustomRequest) {
+                    this.requestEvents(EventEndpoint.projectEvents);
+                }
+            } else {
+                this.projectSubscriptionCorrIds.delete(subscription.correlation);
+            }
+        });
+    }
+
+    removeCustomMessageSubscription(subscription: XoMessage) {
+        if (!this.projectSubscriptionCorrIds.has(subscription.correlation)) {
+            // no subscription for this correlation id exists
+            return;
+        }
+
+        this.projectSubscriptionCorrIds.delete(subscription.correlation);
+
+        const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_UNSUBSCRIBE + '/' + this.id;
+        this.http.post(url, subscription.encode()).pipe(
+            catchError(() => {
+                this.projectSubscriptionCorrIds.add(subscription.correlation);
+                return of(null);
+            })
+        ).subscribe(result => {
+            if (result.error) {
+                this.projectSubscriptionCorrIds.add(subscription.correlation);
+            }
+        });
+    }
+
 }
