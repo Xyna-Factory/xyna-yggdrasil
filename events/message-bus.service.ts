@@ -18,11 +18,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 
+import { XoJson } from '@zeta/api';
 import { FullQualifiedName, RuntimeContext } from '@zeta/api/xo/xo-describer';
 import { AuthService } from '@zeta/auth';
 import { randomUUID } from '@zeta/base';
 
-import { Observable, of, Subject } from 'rxjs/';
+import { Observable, of, Subject } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { XoDeploymentItemChange } from './xo/deployment-item-change.model';
@@ -204,7 +205,7 @@ export class MessageBusService {
 
                 return of(null);
             })
-        ).subscribe(responseJSON => {
+        ).subscribe((responseJSON: XoJson) => {
             if (endpoint === EventEndpoint.projectEvents) {
                 this.pendingCustomRequest = false;
             }
@@ -292,7 +293,7 @@ export class MessageBusService {
                 this.projectSubscriptionCorrIds.delete(subscription.correlation);
                 return of(null);
             })
-        ).subscribe(result => {
+        ).subscribe((result: any) => {
             if (!result.error) {
                 if (this.projectSubscriptionCorrIds.size > 0 && !this.pendingCustomRequest) {
                     this.requestEvents(EventEndpoint.projectEvents);
@@ -317,7 +318,7 @@ export class MessageBusService {
                 this.projectSubscriptionCorrIds.add(subscription.correlation);
                 return of(null);
             })
-        ).subscribe(result => {
+        ).subscribe((result: any) => {
             if (result.error) {
                 this.projectSubscriptionCorrIds.add(subscription.correlation);
             }
