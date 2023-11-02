@@ -48,6 +48,7 @@ import { XoXMOMSave } from './xo/xmom-save.model';
 
 export enum EventEndpoint { events = 'events', projectEvents = 'projectEvents' }
 
+/* eslint-disable brace-style */
 
 /**
  * Structure to cluster XMOM changes with same paths
