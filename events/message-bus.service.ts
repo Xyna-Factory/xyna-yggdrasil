@@ -104,6 +104,11 @@ export class XMOMChangeBundle {
 }
 
 
+export interface MessageBusObserver {
+    receiveEvent(event: XoProjectEvent): void
+}
+
+
 @Injectable()
 export class MessageBusService {
 
@@ -195,6 +200,10 @@ export class MessageBusService {
         const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + endpoint + '/' + this.id;
 
         if (endpoint === EventEndpoint.projectEvents) {
+            if (this.pendingCustomRequest) {
+                return;
+            }
+
             this.pendingCustomRequest = true;
         }
 
@@ -280,7 +289,7 @@ export class MessageBusService {
 
     // --- custom messages ---
 
-    addCustomMessageSubscription(subscription: XoMessage) {
+    addCustomMessageSubscription(subscription: XoMessage/*, observer: MessageBusObserver*/) {
         if (this.projectSubscriptionCorrIds.has(subscription.correlation)) {
             // a subscription for this correlation id already exists
             return;
@@ -305,7 +314,7 @@ export class MessageBusService {
         });
     }
 
-    removeCustomMessageSubscription(subscription: XoMessage) {
+    removeCustomMessageSubscription(subscription: XoMessage/*, observer: MessageBusObserver*/) {
         if (!this.projectSubscriptionCorrIds.has(subscription.correlation)) {
             // no subscription for this correlation id exists
             return;
