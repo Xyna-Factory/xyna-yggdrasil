@@ -105,7 +105,7 @@ export class XMOMChangeBundle {
 
 
 export interface MessageBusObserver {
-    receiveEvent(event: XoProjectEvent): void
+    receiveEvent(event: XoProjectEvent): void;
 }
 
 
@@ -123,7 +123,7 @@ export class MessageBusService {
     private readonly id: string = randomUUID();
 
     private pendingCustomRequest = false;
-    private readonly projectSubscriptionCorrIds = new Set<string>();
+    private readonly observerToCorrIds = new Map<MessageBusObserver, Set<string>>();
 
     private readonly remoteDestinationsChangeSubject = new Subject<XoRemoteDestinationsChange>();
     get remoteDestinationsChange(): Observable<XoRemoteDestinationsChange> { return this.remoteDestinationsChangeSubject.asObservable(); }
@@ -171,9 +171,6 @@ export class MessageBusService {
     private readonly xmomChangeSubject = new Subject<XMOMChangeBundle>();
     get xmomChange(): Observable<XMOMChangeBundle> { return this.xmomChangeSubject.asObservable(); }
 
-    // custom messages
-    private readonly customMessageReceivedSubject = new Subject<XoProjectEvent>();
-    get customMessageReceived(): Observable<XoProjectEvent> { return this.customMessageReceivedSubject.asObservable(); }
 
     constructor(private readonly http: HttpClient, private readonly auth: AuthService) {
     }
@@ -197,16 +194,15 @@ export class MessageBusService {
 
 
     protected requestEvents(endpoint: EventEndpoint) {
-        const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + endpoint + '/' + this.id;
-
         if (endpoint === EventEndpoint.projectEvents) {
-            if (this.pendingCustomRequest) {
+            if (this.pendingCustomRequest || this.observerToCorrIds.size === 0) {
                 return;
             }
 
             this.pendingCustomRequest = true;
         }
 
+        const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + endpoint + '/' + this.id;
         return this.http.get(url).pipe(
             catchError(() => {
                 if (endpoint === EventEndpoint.projectEvents) {
@@ -241,7 +237,7 @@ export class MessageBusService {
             return this.internalRequestsRunning;
         }
 
-        return this.projectSubscriptionCorrIds.size > 0;
+        return this.observerToCorrIds.size > 0;
     }
 
 
@@ -279,7 +275,7 @@ export class MessageBusService {
             } else if (e instanceof XoXMOMChangedRTCDependencies) {
                 this.xmomChangedRTCDependenciesSubject.next(e);
             } else if (e instanceof XoProjectEvent) {
-                this.customMessageReceivedSubject.next(e);
+                this.notifyCustomMessageSubsribers(e);
             }
         });
         if (xmomChangeBundle.hasData()) {
@@ -289,49 +285,77 @@ export class MessageBusService {
 
     // --- custom messages ---
 
-    addCustomMessageSubscription(subscription: XoMessage/*, observer: MessageBusObserver*/) {
-        if (this.projectSubscriptionCorrIds.has(subscription.correlation)) {
-            // a subscription for this correlation id already exists
+    addCustomMessageSubscription(subscription: XoMessage, observer: MessageBusObserver) {
+        if (!this.storeSubscriptionData(subscription.correlation, observer)) {
+            // the observer has already been subscribed for this correlation id
             return;
         }
-
-        this.projectSubscriptionCorrIds.add(subscription.correlation);
 
         const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_SUBSCRIBE + '/' + this.id;
         this.http.post(url, subscription.encode()).pipe(
             catchError(() => {
-                this.projectSubscriptionCorrIds.delete(subscription.correlation);
+                this.removeSubscriptionData(subscription.correlation, observer);
                 return of(null);
             })
         ).subscribe((result: any) => {
             if (!result.error) {
-                if (this.projectSubscriptionCorrIds.size > 0 && !this.pendingCustomRequest) {
-                    this.requestEvents(EventEndpoint.projectEvents);
-                }
+                this.requestEvents(EventEndpoint.projectEvents);
             } else {
-                this.projectSubscriptionCorrIds.delete(subscription.correlation);
+                this.removeSubscriptionData(subscription.correlation, observer);
             }
         });
     }
 
-    removeCustomMessageSubscription(subscription: XoMessage/*, observer: MessageBusObserver*/) {
-        if (!this.projectSubscriptionCorrIds.has(subscription.correlation)) {
-            // no subscription for this correlation id exists
+    removeCustomMessageSubscription(subscription: XoMessage, observer: MessageBusObserver) {
+        if (!this.removeSubscriptionData(subscription.correlation, observer)) {
+            // the observer is not subscribed for this correlation id
             return;
         }
-
-        this.projectSubscriptionCorrIds.delete(subscription.correlation);
 
         const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_UNSUBSCRIBE + '/' + this.id;
         this.http.post(url, subscription.encode()).pipe(
             catchError(() => {
-                this.projectSubscriptionCorrIds.add(subscription.correlation);
+                this.storeSubscriptionData(subscription.correlation, observer);
                 return of(null);
             })
         ).subscribe((result: any) => {
             if (result.error) {
-                this.projectSubscriptionCorrIds.add(subscription.correlation);
+                this.storeSubscriptionData(subscription.correlation, observer);
             }
+        });
+    }
+
+    private storeSubscriptionData(corrId: string, observer: MessageBusObserver): boolean {
+        if (this.observerToCorrIds.has(observer) && this.observerToCorrIds.get(observer).has(corrId)) {
+            // the observer has already been subscribed for this correlation id
+            return false;
+        }
+
+        if (!this.observerToCorrIds.has(observer)) {
+            this.observerToCorrIds.set(observer, new Set<string>());
+        }
+        this.observerToCorrIds.get(observer).add(corrId);
+
+        return true;
+    }
+
+    private removeSubscriptionData(corrId: string, observer: MessageBusObserver): boolean {
+        if (!this.observerToCorrIds.has(observer) || !this.observerToCorrIds.get(observer).has(corrId)) {
+            // the observer is not subscribed for this correlation id
+            return false;
+        }
+
+        this.observerToCorrIds.get(observer).delete(corrId);
+        if (this.observerToCorrIds.get(observer).size === 0) {
+            this.observerToCorrIds.delete(observer);
+        }
+
+        return true;
+    }
+
+    notifyCustomMessageSubsribers(e: XoProjectEvent) {
+        this.observerToCorrIds.forEach((corrIds, observer) => {
+            observer.receiveEvent(e);
         });
     }
 
