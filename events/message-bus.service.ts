@@ -171,6 +171,16 @@ export class MessageBusService {
     private readonly xmomChangeSubject = new Subject<XMOMChangeBundle>();
     get xmomChange(): Observable<XMOMChangeBundle> { return this.xmomChangeSubject.asObservable(); }
 
+    // custom messages
+    /**
+     * @deprecated
+     */
+    private readonly customMessageReceivedSubject = new Subject<XoProjectEvent>();
+    /**
+     * @deprecated
+     * Implement MessageBusObserver and use addCustomMessageSubscription with signature (subscription: XoMessage, observer: MessageBusObserver) instead.
+     */
+    get customMessageReceived(): Observable<XoProjectEvent> { return this.customMessageReceivedSubject.asObservable(); }
 
     constructor(private readonly http: HttpClient, private readonly auth: AuthService) {
     }
@@ -276,6 +286,7 @@ export class MessageBusService {
                 this.xmomChangedRTCDependenciesSubject.next(e);
             } else if (e instanceof XoProjectEvent) {
                 this.notifyCustomMessageSubsribers(e);
+                this.customMessageReceivedSubject.next(e);
             }
         });
         if (xmomChangeBundle.hasData()) {
@@ -285,7 +296,14 @@ export class MessageBusService {
 
     // --- custom messages ---
 
-    addCustomMessageSubscription(subscription: XoMessage, observer: MessageBusObserver) {
+    /**
+     * @deprecated
+     * Implement MessageBusObserver and use addCustomMessageSubscription with signature (subscription: XoMessage, observer: MessageBusObserver) instead.
+     */
+    addCustomMessageSubscription(subscription: XoMessage): void;
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
+    addCustomMessageSubscription(subscription: XoMessage, observer: MessageBusObserver): void;
+    addCustomMessageSubscription(subscription: XoMessage, observer?: MessageBusObserver): void {
         if (!this.storeSubscriptionData(subscription.correlation, observer)) {
             // the observer has already been subscribed for this correlation id
             return;
@@ -306,7 +324,14 @@ export class MessageBusService {
         });
     }
 
-    removeCustomMessageSubscription(subscription: XoMessage, observer: MessageBusObserver) {
+    /**
+     * @deprecated
+     * Implement MessageBusObserver and use removeCustomMessageSubscription with signature (subscription: XoMessage, observer: MessageBusObserver) instead.
+     */
+    removeCustomMessageSubscription(subscription: XoMessage): void;
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
+    removeCustomMessageSubscription(subscription: XoMessage, observer: MessageBusObserver): void;
+    removeCustomMessageSubscription(subscription: XoMessage, observer?: MessageBusObserver): void {
         if (!this.removeSubscriptionData(subscription.correlation, observer)) {
             // the observer is not subscribed for this correlation id
             return;
@@ -354,9 +379,10 @@ export class MessageBusService {
     }
 
     notifyCustomMessageSubsribers(e: XoProjectEvent) {
-        this.observerToCorrIds.forEach((corrIds, observer) => {
-            observer.receiveEvent(e);
-        });
+        for (const observer of this.observerToCorrIds.keys()) {
+            if (observer) {
+                observer.receiveEvent(e);
+            }
+        }
     }
-
 }
