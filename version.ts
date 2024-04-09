@@ -16,4 +16,4 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
 export const YggdrasilName = 'Yggdrasil';
-export const YggdrasilVersion = '1.3.0';
+export const YggdrasilVersion = '1.4.0';
