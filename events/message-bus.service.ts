@@ -23,8 +23,8 @@ import { FullQualifiedName, RuntimeContext } from '@zeta/api/xo/xo-describer';
 import { AuthService } from '@zeta/auth';
 import { randomUUID } from '@zeta/base';
 
-import { Observable, of, Subject } from 'rxjs';
-import { catchError, timeout } from 'rxjs/operators';
+import { concat, Observable, of, Subject } from 'rxjs';
+import { catchError, last, share, timeout } from 'rxjs/operators';
 
 import { XoDeploymentItemChange } from './xo/deployment-item-change.model';
 import { XoDocumentChange } from './xo/document-change.model';
@@ -126,8 +126,7 @@ export class MessageBusService {
     private readonly id: string = randomUUID();
 
     private pendingCustomRequest = false;
-    private nextUnSubRequestId = 0;
-    private readonly queuedUnSubRequests: number[] = [];
+    private subAndUnsubQueue: Observable<Object>  = of();
     private readonly observerToCorrIds = new Map<MessageBusObserver, Set<string>>();
 
     private readonly remoteDestinationsChangeSubject = new Subject<XoRemoteDestinationsChange>();
@@ -314,33 +313,22 @@ export class MessageBusService {
             return;
         }
 
-        const subRequestId = this.addUnSubRequestToQueue();
-        this.waitForConditionOrTimeout(() => this.queuedUnSubRequests[0] === subRequestId, this.UN_SUBSCRIBE_WAIT_TIME).then(isNextInQueue => {
-            if (!isNextInQueue) {
-                console.error('Timeout while waiting in queue to subscribe for ' + subscription.correlation);
-                return;
-            }
+        const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_SUBSCRIBE + '/' + this.id;
+        const nextSubRequest = this.http.post(url, subscription.encode()).pipe(
+            timeout(this.UN_SUBSCRIBE_REQUEST_TIMEOUT),
+            catchError(() => {
+                console.error('Error while waiting to subscribe for ' + subscription.correlation);
+                return of(null);
+            })
+        );
 
-            const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_SUBSCRIBE + '/' + this.id;
-            this.http.post(url, subscription.encode()).pipe(
-                timeout(this.UN_SUBSCRIBE_REQUEST_TIMEOUT),
-                catchError(() => {
-                    console.error('Error while waiting to subscribe for ' + subscription.correlation);
-                    this.removeUnSubRequestFromQueue(subRequestId);
-                    this.removeSubscriptionData(subscription.correlation, observer);
-                    return of(null);
-                })
-            ).subscribe((result: any) => {
-                this.removeUnSubRequestFromQueue(subRequestId);
-                if (!!result && !result.error) {
-                    this.requestEvents(EventEndpoint.projectEvents);
-                } else {
-                    this.removeSubscriptionData(subscription.correlation, observer);
-                }
-            });
-        }).catch(error => {
-            console.error('Could not subscribe for ' + subscription.correlation);
-            this.removeUnSubRequestFromQueue(subRequestId);
+        this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextSubRequest).pipe(share());
+        this.subAndUnsubQueue.pipe(last()).subscribe((result: any) => {
+            if (!!result && !result.error) {
+                this.requestEvents(EventEndpoint.projectEvents);
+            } else {
+                this.removeSubscriptionData(subscription.correlation, observer);
+            }
         });
     }
 
@@ -357,61 +345,21 @@ export class MessageBusService {
             return;
         }
 
-        const subRequestId = this.addUnSubRequestToQueue();
-        this.waitForConditionOrTimeout(() => this.queuedUnSubRequests[0] === subRequestId, this.UN_SUBSCRIBE_WAIT_TIME).then(isNextInQueue => {
-            if (!isNextInQueue) {
-                console.error('Timeout while waiting in queue to unsubscribe for ' + subscription.correlation);
-                return;
+        const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_UNSUBSCRIBE + '/' + this.id;
+        const nextUnsubRequest = this.http.post(url, subscription.encode()).pipe(
+            timeout(this.UN_SUBSCRIBE_REQUEST_TIMEOUT),
+            catchError(() => {
+                console.error('Error while waiting to unsubscribe for ' + subscription.correlation);
+                return of(null);
+            })
+        );
+
+        this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextUnsubRequest).pipe(share());
+        this.subAndUnsubQueue.pipe(last()).subscribe((result: any) => {
+            if (!result || result.error) {
+                this.storeSubscriptionData(subscription.correlation, observer);
             }
-
-            const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_UNSUBSCRIBE + '/' + this.id;
-            this.http.post(url, subscription.encode()).pipe(
-                timeout(this.UN_SUBSCRIBE_REQUEST_TIMEOUT),
-                catchError(() => {
-                    console.error('Error while waiting to unsubscribe for ' + subscription.correlation);
-                    this.removeUnSubRequestFromQueue(subRequestId);
-                    this.storeSubscriptionData(subscription.correlation, observer);
-                    return of(null);
-                })
-            ).subscribe((result: any) => {
-                this.removeUnSubRequestFromQueue(subRequestId);
-                if (!result || result.error) {
-                    this.storeSubscriptionData(subscription.correlation, observer);
-                }
-            });
-        }).catch(error => {
-            console.error('Could not unsubscribe for ' + subscription.correlation);
-            this.removeUnSubRequestFromQueue(subRequestId);
         });
-    }
-
-    private waitForConditionOrTimeout(condition: () => boolean, timeoutMs: number): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            const interval = setInterval(() => {
-                if (condition()) {
-                    clearInterval(interval);
-                    resolve(true);
-                }
-            }, this.UN_SUB_REQUESTS_CHECK_INTERVAL);
-
-            setTimeout(() => {
-                clearInterval(interval);
-                resolve(false);
-            }, timeoutMs);
-        });
-    }
-
-    private addUnSubRequestToQueue() {
-        const requestId = this.nextUnSubRequestId++;
-        this.queuedUnSubRequests.push(requestId);
-
-        return requestId;
-    }
-
-    private removeUnSubRequestFromQueue(requestId: number) {
-        if (this.queuedUnSubRequests[0] === requestId) {
-            this.queuedUnSubRequests.shift();
-        }
     }
 
     private storeSubscriptionData(corrId: string, observer: MessageBusObserver): boolean {
