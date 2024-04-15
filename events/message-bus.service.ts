@@ -322,7 +322,7 @@ export class MessageBusService {
             })
         );
 
-        this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextSubRequest).pipe(share());
+        this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextSubRequest).pipe(share({ resetOnComplete: false, resetOnError: false }));
         this.subAndUnsubQueue.pipe(last()).subscribe((result: any) => {
             if (!!result && !result.error) {
                 this.requestEvents(EventEndpoint.projectEvents);
@@ -354,7 +354,7 @@ export class MessageBusService {
             })
         );
 
-        this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextUnsubRequest).pipe(share());
+        this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextUnsubRequest).pipe(share({ resetOnComplete: false, resetOnError: false }));
         this.subAndUnsubQueue.pipe(last()).subscribe((result: any) => {
             if (!result || result.error) {
                 this.storeSubscriptionData(subscription.correlation, observer);
