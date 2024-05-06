@@ -23,8 +23,8 @@ import { FullQualifiedName, RuntimeContext } from '@zeta/api/xo/xo-describer';
 import { AuthService } from '@zeta/auth';
 import { randomUUID } from '@zeta/base';
 
-import { Observable, of, Subject } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { concat, Observable, of, Subject } from 'rxjs';
+import { catchError, last, share, timeout } from 'rxjs/operators';
 
 import { XoDeploymentItemChange } from './xo/deployment-item-change.model';
 import { XoDocumentChange } from './xo/document-change.model';
@@ -118,11 +118,15 @@ export class MessageBusService {
     readonly PROJECT_EVENTS_SUBSCRIBE = 'subscribeProjectEvents';
     readonly PROJECT_EVENTS_UNSUBSCRIBE = 'unsubscribeProjectEvents';
     readonly STATUS_REFRESH_DELAY = 10 * 1000;
+    readonly UN_SUBSCRIBE_REQUEST_TIMEOUT = 20000;
+    readonly UN_SUBSCRIBE_WAIT_TIME = this.UN_SUBSCRIBE_REQUEST_TIMEOUT * 2;
+    readonly UN_SUB_REQUESTS_CHECK_INTERVAL = 100;
 
     private internalRequestsRunning = false;
     private readonly id: string = randomUUID();
 
     private pendingCustomRequest = false;
+    private subAndUnsubQueue: Observable<Object>  = of();
     private readonly observerToCorrIds = new Map<MessageBusObserver, Set<string>>();
 
     private readonly remoteDestinationsChangeSubject = new Subject<XoRemoteDestinationsChange>();
@@ -310,13 +314,17 @@ export class MessageBusService {
         }
 
         const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_SUBSCRIBE + '/' + this.id;
-        this.http.post(url, subscription.encode()).pipe(
+        const nextSubRequest = this.http.post(url, subscription.encode()).pipe(
+            timeout(this.UN_SUBSCRIBE_REQUEST_TIMEOUT),
             catchError(() => {
-                this.removeSubscriptionData(subscription.correlation, observer);
+                console.error('Error while waiting to subscribe for ' + subscription.correlation);
                 return of(null);
             })
-        ).subscribe((result: any) => {
-            if (!result.error) {
+        );
+
+        this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextSubRequest).pipe(share({ resetOnComplete: false, resetOnError: false }));
+        this.subAndUnsubQueue.pipe(last()).subscribe((result: any) => {
+            if (!!result && !result.error) {
                 this.requestEvents(EventEndpoint.projectEvents);
             } else {
                 this.removeSubscriptionData(subscription.correlation, observer);
@@ -338,13 +346,17 @@ export class MessageBusService {
         }
 
         const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + this.PROJECT_EVENTS_UNSUBSCRIBE + '/' + this.id;
-        this.http.post(url, subscription.encode()).pipe(
+        const nextUnsubRequest = this.http.post(url, subscription.encode()).pipe(
+            timeout(this.UN_SUBSCRIBE_REQUEST_TIMEOUT),
             catchError(() => {
-                this.storeSubscriptionData(subscription.correlation, observer);
+                console.error('Error while waiting to unsubscribe for ' + subscription.correlation);
                 return of(null);
             })
-        ).subscribe((result: any) => {
-            if (result.error) {
+        );
+
+        this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextUnsubRequest).pipe(share({ resetOnComplete: false, resetOnError: false }));
+        this.subAndUnsubQueue.pipe(last()).subscribe((result: any) => {
+            if (!result || result.error) {
                 this.storeSubscriptionData(subscription.correlation, observer);
             }
         });
