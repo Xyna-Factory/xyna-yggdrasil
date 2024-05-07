@@ -1,6 +1,6 @@
 /*
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- * Copyright 2023 Xyna GmbH, Germany
+ * Copyright 2024 Xyna GmbH, Germany
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,5 +15,25 @@
  * limitations under the License.
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
-export const YggdrasilName = 'Yggdrasil';
-export const YggdrasilVersion = '1.5.0';
+import { XoObjectClass, XoArrayClass, XoProperty, XoObject, XoArray } from '@zeta/api';
+import { XoContext } from './context.model';
+import { XoGuiDefiningWorkflowArray } from './gui-defining-workflow.model';
+
+
+@XoObjectClass(null, 'xmcp.yggdrasil.plugin', 'Plugin')
+export class XoPlugin extends XoObject {
+
+
+    @XoProperty(XoContext)
+    context: XoContext = new XoContext();
+
+
+    @XoProperty(XoGuiDefiningWorkflowArray)
+    guiDefiningWorkflow: XoGuiDefiningWorkflowArray = new XoGuiDefiningWorkflowArray();
+
+
+}
+
+@XoArrayClass(XoPlugin)
+export class XoPluginArray extends XoArray<XoPlugin> {
+}
