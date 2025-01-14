@@ -15,17 +15,14 @@
  * limitations under the License.
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
-import { XoObjectClass, XoArrayClass, XoProperty, XoObject, XoArray } from '@zeta/api';
-import { XoContext } from './context.model';
+import { XoArray, XoArrayClass, XoObjectClass, XoProperty } from '@zeta/api';
+
 import { XoGuiDefiningWorkflowArray } from './gui-defining-workflow.model';
+import { XoPluginBase } from './plugin-base.model';
 
 
-@XoObjectClass(null, 'xmcp.yggdrasil.plugin', 'Plugin')
-export class XoPlugin extends XoObject {
-
-
-    @XoProperty(XoContext)
-    context: XoContext = new XoContext();
+@XoObjectClass(XoPluginBase, 'xmcp.yggdrasil.plugin', 'Plugin')
+export class XoPlugin extends XoPluginBase {
 
 
     @XoProperty(XoGuiDefiningWorkflowArray)

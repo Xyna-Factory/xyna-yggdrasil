@@ -1,6 +1,6 @@
 /*
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- * Copyright 2023 Xyna GmbH, Germany
+ * Copyright 2024 Xyna GmbH, Germany
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,5 +15,22 @@
  * limitations under the License.
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
-export const YggdrasilName = 'Yggdrasil';
-export const YggdrasilVersion = '1.5.2';
+import { XoArray, XoArrayClass, XoObjectClass, XoProperty } from '@zeta/api';
+
+import { XoContextMenuEntryArray } from './context-menu-entry.model';
+import { XoPluginBase } from './plugin-base.model';
+
+
+@XoObjectClass(XoPluginBase, 'xmcp.yggdrasil.plugin', 'ContextMenuPlugin')
+export class XoContextMenuPlugin extends XoPluginBase {
+
+
+    @XoProperty(XoContextMenuEntryArray)
+    menuEntry: XoContextMenuEntryArray = new XoContextMenuEntryArray();
+
+
+}
+
+@XoArrayClass(XoContextMenuPlugin)
+export class XoContextMenuPluginArray extends XoArray<XoContextMenuPlugin> {
+}

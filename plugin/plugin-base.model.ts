@@ -1,6 +1,6 @@
 /*
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- * Copyright 2023 Xyna GmbH, Germany
+ * Copyright 2024 Xyna GmbH, Germany
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,5 +15,21 @@
  * limitations under the License.
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
-export const YggdrasilName = 'Yggdrasil';
-export const YggdrasilVersion = '1.5.2';
+import { XoArray, XoArrayClass, XoObject, XoObjectClass, XoProperty } from '@zeta/api';
+
+import { XoContext } from './context.model';
+
+
+@XoObjectClass(null, 'xmcp.yggdrasil.plugin', 'PluginBase')
+export class XoPluginBase extends XoObject {
+
+
+    @XoProperty(XoContext)
+    context: XoContext = new XoContext();
+
+
+}
+
+@XoArrayClass(XoPluginBase)
+export class XoPluginBaseArray extends XoArray<XoPluginBase> {
+}
