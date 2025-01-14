@@ -15,7 +15,7 @@
  * limitations under the License.
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
-import { XoObjectClass, XoArrayClass, XoProperty, XoObject, XoArray, XoXPRCRuntimeContext } from '@zeta/api';
+import { XoArray, XoArrayClass, XoObject, XoObjectClass, XoProperty, XoXPRCRuntimeContext } from '@zeta/api';
 
 
 @XoObjectClass(null, 'xmcp.yggdrasil.plugin', 'Context')
