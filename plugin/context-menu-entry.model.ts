@@ -1,6 +1,6 @@
 /*
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- * Copyright 2023 Xyna GmbH, Germany
+ * Copyright 2024 Xyna GmbH, Germany
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,5 +15,35 @@
  * limitations under the License.
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
-export const YggdrasilName = 'Yggdrasil';
-export const YggdrasilVersion = '1.5.2';
+import { XoArray, XoArrayClass, XoObject, XoObjectClass, XoProperty, XoXPRCRuntimeContext } from '@zeta/api';
+
+
+@XoObjectClass(null, 'xmcp.yggdrasil.plugin', 'ContextMenuEntry')
+export class XoContextMenuEntry extends XoObject {
+
+
+    @XoProperty()
+    navigationEntryLabel: string;
+
+
+    @XoProperty()
+    navigationEntryName: string;
+
+
+    @XoProperty()
+    navigationIconName: string;
+
+
+    @XoProperty()
+    fQN: string;
+
+
+    @XoProperty(XoXPRCRuntimeContext)
+    runtimeContext: XoXPRCRuntimeContext = new XoXPRCRuntimeContext();
+
+
+}
+
+@XoArrayClass(XoContextMenuEntry)
+export class XoContextMenuEntryArray extends XoArray<XoContextMenuEntry> {
+}
