@@ -48,7 +48,7 @@ import { XoXMOMSave } from './xo/xmom-save.model';
 
 export enum EventEndpoint { events = 'events', projectEvents = 'projectEvents' }
 
-/* eslint-disable brace-style */
+ 
 
 /**
  * Structure to cluster XMOM changes with same paths
@@ -126,6 +126,7 @@ export class MessageBusService {
     private readonly id: string = randomUUID();
 
     private pendingCustomRequest = false;
+    // eslint-disable-next-line @typescript-eslint/no-wrapper-object-types
     private subAndUnsubQueue: Observable<Object>  = of();
     private readonly observerToCorrIds = new Map<MessageBusObserver, Set<string>>();
 
