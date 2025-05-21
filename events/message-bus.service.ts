@@ -109,7 +109,9 @@ export interface MessageBusObserver {
 }
 
 
-@Injectable()
+@Injectable({
+    providedIn: 'root'
+})
 export class MessageBusService {
 
     readonly RUNTIME_CONTEXT = 'runtimeContext';
