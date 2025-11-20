@@ -15,7 +15,6 @@
  * limitations under the License.
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
-export * from './message-bus.module';
 export * from './message-bus.service';
 export * from './xo/deployment-item-change.model';
 export * from './xo/document-change.model';
