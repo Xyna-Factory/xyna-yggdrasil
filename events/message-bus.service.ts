@@ -16,7 +16,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 
 import { XoJson } from '@zeta/api';
 import { FullQualifiedName, RuntimeContext } from '@zeta/api/xo/xo-describer';
@@ -113,6 +113,9 @@ export interface MessageBusObserver {
     providedIn: 'root'
 })
 export class MessageBusService {
+    private readonly http = inject(HttpClient);
+    private readonly auth = inject(AuthService);
+
 
     readonly RUNTIME_CONTEXT = 'runtimeContext';
     readonly EVENTS_REQUEST = 'events';
@@ -177,9 +180,6 @@ export class MessageBusService {
 
     private readonly xmomChangeSubject = new Subject<XMOMChangeBundle>();
     get xmomChange(): Observable<XMOMChangeBundle> { return this.xmomChangeSubject.asObservable(); }
-
-    constructor(private readonly http: HttpClient, private readonly auth: AuthService) {
-    }
 
 
     // Starts request loop for Xyna-internal events. Loop for custom events is started automatically after adding subscription via addCustomMessageSubscription().
