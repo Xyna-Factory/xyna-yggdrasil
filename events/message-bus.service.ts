@@ -1,3 +1,6 @@
+import { concat, Observable, of, Subject } from 'rxjs';
+import { catchError, last, share, timeout } from 'rxjs/operators';
+
 /*
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  * Copyright 2023 Xyna GmbH, Germany
@@ -16,15 +19,11 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
-
+import { inject, Injectable } from '@angular/core';
 import { XoJson } from '@zeta/api';
 import { FullQualifiedName, RuntimeContext } from '@zeta/api/xo/xo-describer';
 import { AuthService } from '@zeta/auth';
 import { randomUUID } from '@zeta/base';
-
-import { concat, Observable, of, Subject } from 'rxjs';
-import { catchError, last, share, timeout } from 'rxjs/operators';
 
 import { XoDeploymentItemChange } from './xo/deployment-item-change.model';
 import { XoDocumentChange } from './xo/document-change.model';
@@ -48,7 +47,7 @@ import { XoXMOMSave } from './xo/xmom-save.model';
 
 export enum EventEndpoint { events = 'events', projectEvents = 'projectEvents' }
 
- 
+
 
 /**
  * Structure to cluster XMOM changes with same paths
@@ -132,7 +131,7 @@ export class MessageBusService {
 
     private pendingCustomRequest = false;
     // eslint-disable-next-line @typescript-eslint/no-wrapper-object-types
-    private subAndUnsubQueue: Observable<Object>  = of();
+    private subAndUnsubQueue: Observable<Object> = of();
     private readonly observerToCorrIds = new Map<MessageBusObserver, Set<string>>();
 
     private readonly remoteDestinationsChangeSubject = new Subject<XoRemoteDestinationsChange>();
@@ -209,7 +208,7 @@ export class MessageBusService {
         }
 
         const url = this.RUNTIME_CONTEXT + '/' + RuntimeContext.guiHttpApplication.uniqueKey + '/' + endpoint + '/' + this.id;
-        return this.http.get(url).pipe(
+        return this.http.get<XoJson>(url).pipe(
             catchError(() => {
                 if (endpoint === EventEndpoint.projectEvents) {
                     this.pendingCustomRequest = false;
@@ -217,7 +216,7 @@ export class MessageBusService {
 
                 return of(null);
             })
-        ).subscribe((responseJSON: XoJson) => {
+        ).subscribe(responseJSON => {
             if (endpoint === EventEndpoint.projectEvents) {
                 this.pendingCustomRequest = false;
             }
