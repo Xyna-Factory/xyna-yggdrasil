@@ -1,6 +1,3 @@
-import { concat, Observable, of, Subject } from 'rxjs';
-import { catchError, last, share, timeout } from 'rxjs/operators';
-
 /*
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  * Copyright 2023 Xyna GmbH, Germany
@@ -18,6 +15,9 @@ import { catchError, last, share, timeout } from 'rxjs/operators';
  * limitations under the License.
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
+import { concat, Observable, of, Subject } from 'rxjs';
+import { catchError, last, share, timeout } from 'rxjs/operators';
+
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { XoJson } from '@zeta/api';
