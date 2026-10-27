@@ -19,10 +19,12 @@ import { XoObjectClass, XoArrayClass, XoObject, XoArray, XoProperty } from '@zet
 
 
 
+// @ts-expect-error(TODO:)
 @XoObjectClass(null, 'xmcp.yggdrasil', 'Force')
 export class XoForce extends XoObject {
 
     @XoProperty()
+    // @ts-expect-error(TODO:)
     force: boolean;
 
     static withForce(force = true): XoForce {

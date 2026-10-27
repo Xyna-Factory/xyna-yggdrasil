@@ -18,19 +18,23 @@
 import { XoArray, XoArrayClass, XoObject, XoObjectClass, XoProperty, XoXPRCRuntimeContext } from '@zeta/api';
 
 
+// @ts-expect-error(TODO:)
 @XoObjectClass(null, 'xmcp.yggdrasil.plugin', 'Context')
 export class XoContext extends XoObject {
 
 
     @XoProperty()
+    // @ts-expect-error(TODO:)
     fQN: string;
 
 
     @XoProperty()
+    // @ts-expect-error(TODO:)
     location: string;
 
 
     @XoProperty()
+    // @ts-expect-error(TODO:)
     objectId: string;
 
 
