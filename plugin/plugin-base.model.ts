@@ -20,6 +20,7 @@ import { XoArray, XoArrayClass, XoObject, XoObjectClass, XoProperty } from '@zet
 import { XoContext } from './context.model';
 
 
+// @ts-expect-error(TODO:)
 @XoObjectClass(null, 'xmcp.yggdrasil.plugin', 'PluginBase')
 export class XoPluginBase extends XoObject {
 

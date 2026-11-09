@@ -18,23 +18,28 @@
 import { XoArray, XoArrayClass, XoObject, XoObjectClass, XoProperty, XoXPRCRuntimeContext } from '@zeta/api';
 
 
+// @ts-expect-error(TODO:)
 @XoObjectClass(null, 'xmcp.yggdrasil.plugin', 'ContextMenuEntry')
 export class XoContextMenuEntry extends XoObject {
 
 
     @XoProperty()
+    // @ts-expect-error(TODO:)
     navigationEntryLabel: string;
 
 
     @XoProperty()
+    // @ts-expect-error(TODO:)
     navigationEntryName: string;
 
 
     @XoProperty()
+    // @ts-expect-error(TODO:)
     navigationIconName: string;
 
 
     @XoProperty()
+    // @ts-expect-error(TODO:)
     fQN: string;
 
 

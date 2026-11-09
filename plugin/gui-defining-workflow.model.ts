@@ -18,12 +18,14 @@
 import { XoObjectClass, XoArrayClass, XoProperty, XoObject, XoArray, XoXPRCRuntimeContext, XoTransient, RuntimeContext, XoUnique } from '@zeta/api';
 
 
+// @ts-expect-error(TODO:)
 @XoObjectClass(null, 'xmcp.yggdrasil.plugin', 'GuiDefiningWorkflow')
 export class XoGuiDefiningWorkflow extends XoObject {
 
 
     @XoProperty()
     @XoUnique()
+    // @ts-expect-error(TODO:)
     fQN: string;
 
 
@@ -33,6 +35,7 @@ export class XoGuiDefiningWorkflow extends XoObject {
     @XoProperty()
     @XoTransient()
     @XoUnique()
+    // @ts-expect-error(TODO:)
     zetaRTC: RuntimeContext;
 
     protected afterDecode() {

@@ -48,7 +48,7 @@ import { XoXMOMSave } from './xo/xmom-save.model';
 
 export enum EventEndpoint { events = 'events', projectEvents = 'projectEvents' }
 
- 
+
 
 /**
  * Structure to cluster XMOM changes with same paths
@@ -136,50 +136,80 @@ export class MessageBusService {
     private readonly observerToCorrIds = new Map<MessageBusObserver, Set<string>>();
 
     private readonly remoteDestinationsChangeSubject = new Subject<XoRemoteDestinationsChange>();
-    get remoteDestinationsChange(): Observable<XoRemoteDestinationsChange> { return this.remoteDestinationsChangeSubject.asObservable(); }
+    get remoteDestinationsChange(): Observable<XoRemoteDestinationsChange> {
+        return this.remoteDestinationsChangeSubject.asObservable();
+    }
 
     private readonly deploymentItemChangeSubject = new Subject<XoDeploymentItemChange>();
-    get deploymentItemChange(): Observable<XoDeploymentItemChange> { return this.deploymentItemChangeSubject.asObservable(); }
+    get deploymentItemChange(): Observable<XoDeploymentItemChange> {
+        return this.deploymentItemChangeSubject.asObservable();
+    }
 
     private readonly structureChangeSubject = new Subject<XoStructureChange>();
-    get structureChange(): Observable<XoStructureChange> { return this.structureChangeSubject.asObservable(); }
+    get structureChange(): Observable<XoStructureChange> {
+        return this.structureChangeSubject.asObservable();
+    }
 
     private readonly subtypesChangeSubject = new Subject<XoSubtypesChange>();
-    get subtypesChange(): Observable<XoSubtypesChange> { return this.subtypesChangeSubject.asObservable(); }
+    get subtypesChange(): Observable<XoSubtypesChange> {
+        return this.subtypesChangeSubject.asObservable();
+    }
 
     /** Remark: Not supported yet (see YG-2) */
     private readonly oisChangeSubject = new Subject<XoOISChange>();
-    get oisChange(): Observable<XoOISChange> { return this.oisChangeSubject.asObservable(); }
+    get oisChange(): Observable<XoOISChange> {
+        return this.oisChangeSubject.asObservable();
+    }
 
     private readonly documentLockSubject = new Subject<XoDocumentLock>();
-    get documentLock(): Observable<XoDocumentLock> { return this.documentLockSubject.asObservable(); }
+    get documentLock(): Observable<XoDocumentLock> {
+        return this.documentLockSubject.asObservable();
+    }
 
     private readonly documentUnlockSubject = new Subject<XoDocumentUnlock>();
-    get documentUnlock(): Observable<XoDocumentUnlock> { return this.documentUnlockSubject.asObservable(); }
+    get documentUnlock(): Observable<XoDocumentUnlock> {
+        return this.documentUnlockSubject.asObservable();
+    }
 
     private readonly documentChangeSubject = new Subject<XoDocumentChange>();
-    get documentChange(): Observable<XoDocumentChange> { return this.documentChangeSubject.asObservable(); }
+    get documentChange(): Observable<XoDocumentChange> {
+        return this.documentChangeSubject.asObservable();
+    }
 
     private readonly documentRelationsChangeSubject = new Subject<XoDocumentRelationsChange>();
-    get documentRelationsChange(): Observable<XoDocumentRelationsChange> { return this.documentRelationsChangeSubject.asObservable(); }
+    get documentRelationsChange(): Observable<XoDocumentRelationsChange> {
+        return this.documentRelationsChangeSubject.asObservable();
+    }
 
     private readonly xmomSaveSubject = new Subject<XoXMOMSave>();
-    get xmomSave(): Observable<XoXMOMSave> { return this.xmomSaveSubject.asObservable(); }
+    get xmomSave(): Observable<XoXMOMSave> {
+        return this.xmomSaveSubject.asObservable();
+    }
 
     private readonly xmomDeleteSubject = new Subject<XoXMOMDelete>();
-    get xmomDelete(): Observable<XoXMOMDelete> { return this.xmomDeleteSubject.asObservable(); }
+    get xmomDelete(): Observable<XoXMOMDelete> {
+        return this.xmomDeleteSubject.asObservable();
+    }
 
     private readonly xmomCreateRTCSubject = new Subject<XoXMOMCreateRTC>();
-    get xmomCreateRTC(): Observable<XoXMOMCreateRTC> { return this.xmomCreateRTCSubject.asObservable(); }
+    get xmomCreateRTC(): Observable<XoXMOMCreateRTC> {
+        return this.xmomCreateRTCSubject.asObservable();
+    }
 
     private readonly xmomDeleteRTCSubject = new Subject<XoXMOMDeleteRTC>();
-    get xmomDeleteRTC(): Observable<XoXMOMDeleteRTC> { return this.xmomDeleteRTCSubject.asObservable(); }
+    get xmomDeleteRTC(): Observable<XoXMOMDeleteRTC> {
+        return this.xmomDeleteRTCSubject.asObservable();
+    }
 
     private readonly xmomChangedRTCDependenciesSubject = new Subject<XoXMOMChangedRTCDependencies>();
-    get xmomChangedRTCDependencies(): Observable<XoXMOMChangedRTCDependencies> { return this.xmomChangedRTCDependenciesSubject.asObservable(); }
+    get xmomChangedRTCDependencies(): Observable<XoXMOMChangedRTCDependencies> {
+        return this.xmomChangedRTCDependenciesSubject.asObservable();
+    }
 
     private readonly xmomChangeSubject = new Subject<XMOMChangeBundle>();
-    get xmomChange(): Observable<XMOMChangeBundle> { return this.xmomChangeSubject.asObservable(); }
+    get xmomChange(): Observable<XMOMChangeBundle> {
+        return this.xmomChangeSubject.asObservable();
+    }
 
 
     // Starts request loop for Xyna-internal events. Loop for custom events is started automatically after adding subscription via addCustomMessageSubscription().
@@ -305,6 +335,7 @@ export class MessageBusService {
             })
         );
 
+        // @ts-expect-error(TODO:)
         this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextSubRequest).pipe(share({ resetOnComplete: false, resetOnError: false }));
         this.subAndUnsubQueue.pipe(last()).subscribe((result: any) => {
             if (!!result && !result.error) {
@@ -330,6 +361,7 @@ export class MessageBusService {
             })
         );
 
+        // @ts-expect-error(TODO:)
         this.subAndUnsubQueue = concat(this.subAndUnsubQueue, nextUnsubRequest).pipe(share({ resetOnComplete: false, resetOnError: false }));
         this.subAndUnsubQueue.pipe(last()).subscribe((result: any) => {
             if (!result || result.error) {
@@ -339,6 +371,7 @@ export class MessageBusService {
     }
 
     private storeSubscriptionData(corrId: string, observer: MessageBusObserver): boolean {
+        // @ts-expect-error(TODO:)
         if (this.observerToCorrIds.has(observer) && this.observerToCorrIds.get(observer).has(corrId)) {
             // the observer has already been subscribed for this correlation id
             return false;
@@ -347,18 +380,22 @@ export class MessageBusService {
         if (!this.observerToCorrIds.has(observer)) {
             this.observerToCorrIds.set(observer, new Set<string>());
         }
+        // @ts-expect-error(TODO:)
         this.observerToCorrIds.get(observer).add(corrId);
 
         return true;
     }
 
     private removeSubscriptionData(corrId: string, observer: MessageBusObserver): boolean {
+        // @ts-expect-error(TODO:)
         if (!this.observerToCorrIds.has(observer) || !this.observerToCorrIds.get(observer).has(corrId)) {
             // the observer is not subscribed for this correlation id
             return false;
         }
 
+        // @ts-expect-error(TODO:)
         this.observerToCorrIds.get(observer).delete(corrId);
+        // @ts-expect-error(TODO:)
         if (this.observerToCorrIds.get(observer).size === 0) {
             this.observerToCorrIds.delete(observer);
         }
