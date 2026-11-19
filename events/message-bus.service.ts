@@ -16,7 +16,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 
 import { XoJson } from '@zeta/api';
 import { FullQualifiedName, RuntimeContext } from '@zeta/api/xo/xo-describer';
@@ -109,9 +109,7 @@ export interface MessageBusObserver {
 }
 
 
-@Injectable({
-    providedIn: 'root'
-})
+@Service()
 export class MessageBusService {
     private readonly http = inject(HttpClient);
     private readonly auth = inject(AuthService);
